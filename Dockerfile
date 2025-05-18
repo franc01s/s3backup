@@ -13,7 +13,7 @@ RUN go mod download
 RUN GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o /server \
     && upx /server
 
-FROM gcr.io/distroless/base-debian12
+FROM debian:12-slim
 
 WORKDIR /
 

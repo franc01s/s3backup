@@ -19,12 +19,18 @@ spec:
           image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - --bucket cud-hassio --sources {{ .Values.mountPath }}
+            - --bucket cud-hassio --sources /s3data/{{ .Values.claim }}
           volumeMounts:
             - name: data
-              mountPath: {{ .Values.mountPath }}
+              mountPath: /s3data/{{ .Values.claim }}
+            - name: s3
+              mountPath: /s3data
       volumes:
         - persistentVolumeClaim:
             claimName: {{ .Values.claim }}
             readOnly: true
           name: data
+        - name: s3
+          emptyDir: {}
+            
+            

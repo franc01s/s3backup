@@ -7,4 +7,3 @@ image:
 
 
 claim: zigbee2mqtt
-mountPath: /data_zigbee2mqtt
