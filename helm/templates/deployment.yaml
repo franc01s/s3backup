@@ -25,6 +25,6 @@ spec:
               mountPath: {{ .Values.mountPath }}
       volumes:
         - persistentVolumeClaim:
-            claimName: zigbee2mqtt
+            claimName: {{ .Values.claim }}
             readOnly: true
           name: data
