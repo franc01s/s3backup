@@ -1,0 +1,10 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/franc01s/s3backup
+  pullPolicy: IfNotPresent
+  tag: 20250518-e103d87
+
+
+claim: zigbee2mqtt
+mountPath: /data_zigbee2mqtt

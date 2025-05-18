@@ -2,18 +2,21 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -30,7 +33,7 @@ func (app *application) scheduler() error {
 	app.jobScheduler = s // Store the scheduler in the application struct
 
 	// Get the interval from config as a string (e.g., "10s" or "15m")
-	intervalStr := os.Getenv("INTERVAL")
+	intervalStr := viper.GetString("interval")
 	if intervalStr == "" {
 		intervalStr = "15m" // Default to 15 minutes if not set
 	}
@@ -58,13 +61,25 @@ func (app *application) scheduler() error {
 }
 
 type application struct {
-	sourceDirs   string
-	bucketName   string
 	jobScheduler gocron.Scheduler // master scheduler
 	client       *s3.Client
 }
 
-func newApplication(sourceDirs, bucketName string) (*application, error) {
+func newApplication() (*application, error) {
+
+	// Parse command line flags
+	pflag.String("sources", "", "Source directory to backup")
+	pflag.String("bucket", "", "S3 bucket name")
+	pflag.String("interval", "1d", "S3 bucket name")
+	pflag.Parse()
+
+	viper.SetEnvPrefix("S3BACKUP")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	viper.BindPFlag("sources", pflag.Lookup("sources"))
+	viper.BindPFlag("bucket", pflag.Lookup("bucket"))
+
 	cred := credentials.NewStaticCredentialsProvider(
 		os.Getenv("EXO_ACCESS_KEY_ID"),
 		os.Getenv("EXO_SECRET_ACCESS_KEY"),
@@ -85,14 +100,12 @@ func newApplication(sourceDirs, bucketName string) (*application, error) {
 		o.UsePathStyle = false
 	})
 	return &application{
-		bucketName: bucketName,
-		sourceDirs: sourceDirs,
-		client:     s3Client,
+		client: s3Client,
 	}, nil
 }
 
 func (app *application) upload() error {
-	for _, sourceDir := range strings.Split(app.sourceDirs, ",") {
+	for _, sourceDir := range strings.Split(viper.GetString("sources"), ",") {
 		err := filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -121,7 +134,7 @@ func (app *application) upload() error {
 
 			// Upload to S3
 			_, err = app.client.PutObject(context.TODO(), &s3.PutObjectInput{
-				Bucket: &app.bucketName,
+				Bucket: aws.String(viper.GetString("bucket")),
 				Key:    aws.String(fmt.Sprintf("%s/%s", filepath.Base(sourceDir), s3Key)),
 				Body:   file,
 			})
@@ -144,19 +157,14 @@ func (app *application) upload() error {
 
 func main() {
 
-	// Parse command line flags
-	sourceDir := flag.String("source", "", "Source directory to backup")
-	bucketName := flag.String("bucket", "", "S3 bucket name")
-	flag.Parse()
-	app, _ := newApplication(*sourceDir, *bucketName)
+	app, _ := newApplication()
 
-	// Validate required flags
-	if *sourceDir == "" || *bucketName == "" {
-		log.Fatal("Source directory and bucket name are required")
-	}
+	app.scheduler()
 
-	app.upload()
-	// Load AWS configuration
+	sigChan := make(chan os.Signal, 1)
 
-	// Walk through the source directory
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	<-sigChan
+
 }

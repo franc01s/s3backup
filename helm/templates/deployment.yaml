@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "s3backup.fullname" . }}
+  labels:
+    {{- include "s3backup.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "s3backup.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "s3backup.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - --bucket cud-hassio --sources {{ .Values.mountPath }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.mountPath }}
+      volumes:
+        - persistentVolumeClaim:
+            claimName: zigbee2mqtt
+            readOnly: true
+          name: data

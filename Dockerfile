@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nmap upx unzip
 COPY . ./
 RUN go mod download 
 
-RUN go build -ldflags "-s -w" -o /server \
+RUN GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o /server \
     && upx /server
 
 FROM gcr.io/distroless/base-debian12
