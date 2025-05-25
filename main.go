@@ -10,7 +10,6 @@ import (
 	"github.com/go-co-op/gocron/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -97,7 +96,7 @@ func newApplication() (*application, error) {
 	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String("https://sos-ch-dk-2.exo.io")
 		o.Region = "ch-dk-2"
-		o.UsePathStyle = false
+		o.UsePathStyle = true
 	})
 	return &application{
 		client: s3Client,
@@ -147,7 +146,7 @@ func (app *application) upload() error {
 		})
 
 		if err != nil {
-			log.Fatalf("Error during backup: %v", err)
+			slog.Error("Error during backup", "error", err)
 		}
 	}
 	fmt.Println("Backup completed successfully!")
