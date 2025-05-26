@@ -5,15 +5,20 @@ ARG ACTIONS_TOKEN
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends nmap upx unzip
+RUN apt-get update && apt-get install -y --no-install-recommends nmap upx unzip 
        
 COPY . ./
 RUN go mod download 
 
-RUN GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o /server \
+RUN go build -ldflags "-s -w" -o /server \
     && upx /server
 
 FROM debian:12-slim
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates &&  /usr/sbin/update-ca-certificates && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
 
