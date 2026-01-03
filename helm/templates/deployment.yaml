@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "s3backup.fullname" . }}
+  labels:
+    {{- include "s3backup.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "s3backup.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "s3backup.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.image.repository }}:{{ .Chart.AppVersion | default "latest" }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- $first := true }}
+            - --sources={{- range .Values.sources }}{{- if not $first }},{{- end }}{{- printf "/mnt/%s" .name }}{{- $first = false }}{{- end }}
+            - --bucket={{ .Values.bucket | default "cud-hassio" }}
+            {{- if .Values.interval }}
+            - --interval={{ .Values.interval }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: EXO_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret | default (.Values.secretName | default (include "s3backup.fullname" .)) }}
+                  key: exo-access-key-id
+            - name: EXO_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret | default (.Values.secretName | default (include "s3backup.fullname" .)) }}
+                  key: exo-secret-access-key
+            - name: EXO_REGION
+              value: {{ .Values.exoRegion | default "ch-dk-2" }}
+          volumeMounts:
+            {{- range .Values.sources }}
+            - name: {{ .name }}
+              mountPath: /mnt/{{ .name }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        {{- range .Values.sources }}
+        - name: {{ .name }}
+          persistentVolumeClaim:
+            claimName: {{ .claimName }}
+            readOnly: true
+        {{- end }}
+            
+            

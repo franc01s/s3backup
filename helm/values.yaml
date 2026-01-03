@@ -1,0 +1,38 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/franc01s/s3backup
+  pullPolicy: IfNotPresent
+
+
+bucket: cud-hassio
+interval: 1d
+exoRegion: ch-dk-2
+secretName: s3backup-secret
+
+# Use an existing secret instead of creating a new one
+# If set, the secret will not be created and this name will be used
+existingSecret: ""
+
+# S3 Credentials (base64 encoded will be handled automatically)
+# Set these values when installing the chart (only used if existingSecret is not set):
+# exoAccessKeyId: "your-access-key-id"
+# exoSecretAccessKey: "your-secret-access-key"
+exoAccessKeyId: ""
+exoSecretAccessKey: ""
+
+# Sources to backup - each source has a name and a PVC claimName
+sources:
+  - name: ha
+    claimName: home-assistant-home-assistant-0
+  - name: zigbee2mqtt
+    claimName: data-volume-zigbee2mqtt-0
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 150m
+    memory: 200Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
