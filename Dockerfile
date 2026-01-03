@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nmap upx-ucl un
 COPY . ./
 RUN go mod download 
 
-RUN go build -ldflags "-s -w" -o /server
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o /server .
  #   && upx /server
 
 FROM gcr.io/distroless/static-debian13:nonroot
